@@ -3,7 +3,7 @@ FROM ubuntu:22.04
 
 # Instala las dependencias necesarias, incluyendo Chrome y ChromeDriver
 RUN apt-get update && \
-    apt-get install -y wget curl unzip python3 python3-pip libglib2.0-0 libnss3 libgconf-2-4 libfontconfig1 libxrender1 libxss1 libxtst6 libxi6 libxcomposite1 libxcursor1 libxdamage1 libxrandr2 libasound2 libatk1.0-0 libcups2 libpangocairo-1.0-0 && \
+    apt-get install -y wget curl unzip python3 python3-pip libglib2.0-0 libnss3 libgconf-2-4 libfontconfig1 libxrender1 libxss1 libxtst6 libxi6 libxcomposite1 libxcursor1 libxdamage1 libxrandr2 libasound2 libatk1.0-0 libcups2 libpangocairo-1.0-0 libgbm1 libgtk-3-0 libdrm2 libxshmfence1 libxkbcommon0 libxkbcommon-x11-0 && \
     apt-get install -y xvfb
 
 # Descargar e instalar Google Chrome versión 129.0.6668.70
@@ -24,7 +24,7 @@ RUN wget https://storage.googleapis.com/chrome-for-testing-public/129.0.6668.70/
 
 # Instala las dependencias de Python
 COPY requirements.txt /app/requirements.txt
-RUN pip3 install -r /app/requirements.txt
+RUN pip3 install --no-cache-dir -r /app/requirements.txt
 
 # Copia el código de la aplicación
 COPY . /app
