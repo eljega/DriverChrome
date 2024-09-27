@@ -11,6 +11,8 @@ RUN apt-get update && \
     wget https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_linux64.zip && \
     unzip chromedriver_linux64.zip && \
     mv chromedriver /usr/local/bin/ && \
+    ln -s /usr/local/bin/chromedriver /usr/bin/chromedriver && \
+    chmod +x /usr/local/bin/chromedriver && \
     rm chromedriver_linux64.zip && apt-get clean
 
 # Instala las dependencias de Python

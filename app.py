@@ -9,54 +9,52 @@ import time
 
 app = Flask(__name__)
 
-# Función para obtener la transcripción (similar a la tuya)
-def obtener_transcripcion(url): 
+def obtener_transcripcion(url):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    service = Service("/usr/bin/chromedriver")  # Ruta estándar de ChromeDriver en el contenedor Docker
+    service = Service("/usr/local/bin/chromedriver")  # Ruta estándar en Railway
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     try:
         driver.get(url)
         time.sleep(2)
-        
+
         more_button = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "expand"))
         )
         driver.execute_script("arguments[0].click();", more_button)
         time.sleep(2)
-        
+
         transcript_button = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, "//ytd-button-renderer//button[contains(@aria-label, 'transcript')]"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", transcript_button)
         driver.execute_script("arguments[0].click();", transcript_button)
-        
+
         WebDriverWait(driver, 30).until(
             EC.visibility_of_element_located((By.XPATH, "//div[@id='segments-container']"))
         )
-        
+
         segments = driver.find_elements(By.XPATH, "//div[@id='segments-container']//yt-formatted-string[@class='segment-text']")
         transcript_text = "\n".join([segment.text for segment in segments])
-        
+
         if len(transcript_text) > 20000:
             transcript_text = transcript_text[:20000]
-        
+
         return transcript_text
     except Exception as e:
         return str(e)
     finally:
         driver.quit()
 
-# Endpoint de la API
 @app.route("/transcripcion", methods=["POST"])
 def transcripcion():
     data = request.get_json()
-    url = data.get('url')
+    url = data.get("url")
     if not url:
         return jsonify({"error": "Falta la URL"}), 400
     
@@ -64,4 +62,4 @@ def transcripcion():
     return jsonify({"transcript": transcript})
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host="0.0.0.0", port=5000)
