@@ -10,52 +10,89 @@ import time
 app = Flask(__name__)
 
 def obtener_transcripcion(url):
+    # Configura las opciones de Selenium para Chrome
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Ejecuta en modo headless
-    chrome_options.add_argument("--no-sandbox")  # Necesario en contenedores
-    chrome_options.add_argument("--disable-dev-shm-usage")  # Usar memoria compartida más eficiente
-    chrome_options.add_argument("--disable-gpu")  # Deshabilita GPU (no es necesario en headless)
-    chrome_options.add_argument("--disable-software-rasterizer")  # Evita problemas de rasterización
-    chrome_options.add_argument("--remote-debugging-port=9222")  # Para evitar problemas con DevToolsActivePort
-    chrome_options.add_argument("--disable-extensions")  # Evitar extensiones innecesarias
-    chrome_options.add_argument("--disable-infobars")  # Evitar que aparezca la barra de información
-    chrome_options.add_argument("--window-size=1920,1080")  # Tamaño de ventana necesario para algunas páginas
-    
-    # Ruta a ChromeDriver
-    service = Service("/usr/local/bin/chromedriver")
+    chrome_options.add_argument("--headless")  # Ejecuta el navegador en modo headless en producción
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    # Define la ubicación del driver de Chrome (en Railway se instala en /usr/local/bin/)
+    chrome_driver_path = "/usr/local/bin/chromedriver"  # Ruta para Railway
+    service = Service(chrome_driver_path)
+
+    # Inicializa el navegador
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     try:
+        print("Navegando a la URL del video de YouTube")
         driver.get(url)
+        
+        # Espera a que la página cargue completamente
+        print("Esperando que la página cargue")
         time.sleep(2)
-
-        more_button = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "expand"))
-        )
+        
+        # Encuentra y presiona el botón de "Más"
+        print("Buscando el botón 'Más'")
+        print("Verificando si el botón 'Más' está presente")
+        try:
+            more_button = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "expand"))
+            )
+            print("El botón 'Más' está presente")
+        except Exception as e:
+            print(f"No se encontró el botón 'Más': {e}")
+            driver.quit()
+            raise e
+        print("Presionando el botón 'Más' usando Javascript")
         driver.execute_script("arguments[0].click();", more_button)
+        # Espera un momento para que el desplegable esté completamente cargado
+        print("Esperando que el desplegable se cargue")
         time.sleep(2)
-
-        transcript_button = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//ytd-button-renderer//button[contains(@aria-label, 'transcript')]"))
+        
+        # Encuentra y desplaza la vista al botón de "Mostrar transcripción"
+        print("Buscando el botón 'Mostrar transcripción'")
+        transcript_button = WebDriverWait(driver, 2).until(
+            EC.presence_of_element_located((By.XPATH, "//ytd-button-renderer[@class='style-scope ytd-video-description-transcript-section-renderer']//button[contains(@aria-label, 'transcript')]"))
         )
+        print("Desplazándose al botón 'Mostrar transcripción'")
         driver.execute_script("arguments[0].scrollIntoView(true);", transcript_button)
+        time.sleep(1)  # Espera breve después del desplazamiento
+        
+        print("Presionando el botón 'Mostrar transcripción' usando Javascript")
         driver.execute_script("arguments[0].click();", transcript_button)
-
+        
+        # Incrementamos el tiempo de espera para que la transcripción se cargue
+        print("Esperando que la transcripción se cargue")
         WebDriverWait(driver, 30).until(
             EC.visibility_of_element_located((By.XPATH, "//div[@id='segments-container']"))
         )
-
-        segments = driver.find_elements(By.XPATH, "//div[@id='segments-container']//yt-formatted-string[@class='segment-text']")
+        
+        # Ahora extraemos los textos de los segmentos de transcripción
+        print("Extrayendo los textos de la transcripción")
+        segments = driver.find_elements(By.XPATH, "//div[@id='segments-container']//yt-formatted-string[@class='segment-text style-scope ytd-transcript-segment-renderer']")
+        
+        # Concatenar el texto de todos los segmentos
         transcript_text = "\n".join([segment.text for segment in segments])
-
+        
+        # Limitar la transcripción a los primeros 20,000 caracteres
         if len(transcript_text) > 20000:
+            print("La transcripción es demasiado larga, truncando a 20,000 caracteres")
             transcript_text = transcript_text[:20000]
-
+        
+        print("Transcripción extraída con éxito")
+        
         return transcript_text
+    
     except Exception as e:
-        return str(e)
+        logger.error(f"Ocurrió un error: {e}")
+        return None
+    
     finally:
+        # Cierra el navegador
+        print("Cerrando el navegador")
         driver.quit()
+
 
 @app.route("/transcripcion", methods=["POST"])
 def transcripcion():
