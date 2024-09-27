@@ -12,10 +12,13 @@ app = Flask(__name__)
 def obtener_transcripcion(url):
     # Configura las opciones de Selenium para Chrome
     chrome_options = Options()
+    chrome_options.binary_location = "/usr/bin/google-chrome"  # Especifica la ubicación del binario de Chrome
     chrome_options.add_argument("--headless")  # Ejecuta el navegador en modo headless en producción
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    chrome_options.add_argument("--window-size=1920,1080")
 
     # Define la ubicación del driver de Chrome (en Railway se instala en /usr/local/bin/)
     chrome_driver_path = "/usr/local/bin/chromedriver"  # Ruta para Railway
@@ -85,7 +88,7 @@ def obtener_transcripcion(url):
         return transcript_text
     
     except Exception as e:
-        logger.error(f"Ocurrió un error: {e}")
+        print(f"Ocurrió un error: {e}")
         return None
     
     finally:
@@ -102,7 +105,10 @@ def transcripcion():
         return jsonify({"error": "Falta la URL"}), 400
     
     transcript = obtener_transcripcion(url)
-    return jsonify({"transcript": transcript})
+    if transcript:
+        return jsonify({"transcript": transcript})
+    else:
+        return jsonify({"error": "No se pudo obtener la transcripción"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
