@@ -1,19 +1,26 @@
 # Usa una imagen base de Ubuntu más ligera y con mejor soporte
 FROM ubuntu:22.04
 
-# Instala las dependencias necesarias, incluyendo Chrome y ChromeDriver
+# Instala las dependencias necesarias, incluyendo wget, curl, unzip y Python
 RUN apt-get update && \
     apt-get install -y wget curl unzip python3 python3-pip && \
-    apt-get install -y xvfb libxi6 libgconf-2-4 && \
-    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list' && \
-    apt-get update && apt-get install -y google-chrome-stable && \
-    wget https://chromedriver.storage.googleapis.com/129.0.6668.70/chromedriver_linux64.zip && \
-    unzip chromedriver_linux64.zip && \
-    mv chromedriver /usr/local/bin/ && \
+    apt-get install -y xvfb libxi6 libgconf-2-4
+
+# Descargar e instalar Google Chrome versión 129.0.6668.70
+RUN wget https://storage.googleapis.com/chrome-for-testing-public/129.0.6668.70/linux64/chrome-linux64.zip && \
+    unzip chrome-linux64.zip && \
+    mv chrome-linux64 /usr/local/bin/ && \
+    ln -s /usr/local/bin/chrome-linux64/chrome /usr/bin/google-chrome && \
+    chmod +x /usr/local/bin/chrome-linux64/chrome && \
+    rm chrome-linux64.zip
+
+# Descargar e instalar ChromeDriver versión 129.0.6668.70
+RUN wget https://storage.googleapis.com/chrome-for-testing-public/129.0.6668.70/linux64/chromedriver-linux64.zip && \
+    unzip chromedriver-linux64.zip && \
+    mv chromedriver-linux64/chromedriver /usr/local/bin/ && \
     ln -s /usr/local/bin/chromedriver /usr/bin/chromedriver && \
     chmod +x /usr/local/bin/chromedriver && \
-    rm chromedriver_linux64.zip && apt-get clean
+    rm chromedriver-linux64.zip
 
 # Instala las dependencias de Python
 COPY requirements.txt /app/requirements.txt
